@@ -39,7 +39,6 @@ def latlon_to_cartesian(ref_latlon, latlon_list):
         z = 0
         sensor_posts.append([x,y,z])
 
-
 def mgrs_to_latlon(ref_mgrs, mgrs_list):
 
     # Convert reference MGRS coordinate to lat/lon
@@ -53,9 +52,6 @@ def mgrs_to_latlon(ref_mgrs, mgrs_list):
     # Convert each MGRS coordinate to lat/lon
     latlon_list = [mgrs.MGRS().toLatLon(mgrs_coord) for mgrs_coord in mgrs_list]
     latlon_to_cartesian(ref_latlon,latlon_list)
-
-
-
 
 def find_angle(x1, x2, y1, y2):
     # Calculate the slope of the line

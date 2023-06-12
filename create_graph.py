@@ -1,51 +1,84 @@
-import plotly.graph_objs as go
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 
-def graphing():
-    # Define the sensor names
-    sensor_names = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8']
+def comparison_graph():
+    # First dataset
+    angles1 = [90, 121, 37, 58, 178, 165, 25]
+    times1 = [2, 4, 7, 10, 12, 13, 13.5]
+    bar_values1 = [86, 117, 75, 45, 125, 111, 51]
 
-    # Define the x-axis values
-    time = list(range(0, 105, 5))
+    # Second dataset
+    angles2 = [45, 85, 62, 31, 99, 110, 75]
+    times2 = [3, 6, 8, 11, 12.5, 14, 14.5]
+    bar_values2 = [60, 95, 80, 40, 115, 105, 70]
 
-    # Create a list of traces for each sensor
-    traces = []
-    for name in sensor_names:
-        # Create a line trace for the sensor with y-values set to the sensor name
-        trace = go.Scatter(x=time, y=[name]*len(time), name=name, mode='lines')
-        traces.append(trace)
+    # Convert angles to radians
+    angles_radians1 = np.radians(angles1)
+    angles_radians2 = np.radians(angles2)
 
-    # Create the layout for the graph with A4 paper size
-    layout = go.Layout(title='Sensor Readings', xaxis=dict(title='Time (s)'), yaxis=dict(title='Sensor Names'), width=595, height=842)
+    # Create the figure and subplots
+    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 
-    # Create the figure object
-    fig = go.Figure(data=traces, layout=layout)
+    # Set aspect ratio to equal for the angle graph subplot
+    ax1.set_aspect('equal')
+
+    # Plot the arcs and arrows for the first dataset in the angle graph subplot
+    for angle, x, y in zip(angles_radians1, times1, np.zeros_like(times1)):
+        arc = patches.Arc((x, y), 0.2, 0.2, 0, 0, np.degrees(angle))
+        ax1.add_patch(arc)
+        ax1.annotate("", xy=(x + np.cos(angle), y + np.sin(angle)), xytext=(x, y),
+                     arrowprops=dict(arrowstyle="->"))
+        ax1.text(x + 0.5* np.cos(angle), y + 0.5 * np.sin(angle),
+                 f"{int(np.degrees(angle))}°", ha='center', va='center')
+
+    # Create vertical dashed lines on the angle graph subplot for the first dataset
+    for t in times1:
+        ax1.axvline(x=t, linestyle='dashed', color='gray')
+
+    # Plot the bar chart for the first dataset in the second subplot
+    ax2.bar(times1, bar_values1, width=0.2, align='center', color='blue')
+
+    # Create vertical dashed lines on the bar chart subplot for the first dataset
+    for t in times1:
+        ax2.axvline(x=t, linestyle='dashed', color='gray')
+        ax2.text(t , bar_values1[times1.index(t)] + 1.2, f"{int(bar_values1[times1.index(t)])}", ha='center', va='center')
+
+    # Plot the arcs and arrows for the second dataset in the angle graph subplot
+    for angle, x, y in zip(angles_radians2, times2, np.zeros_like(times2)):
+        arc = patches.Arc((x, y), 0.2, 0.2, 0, 0, np.degrees(angle))
+        ax1.add_patch(arc)
+        ax1.annotate("", xy=(x + np.cos(angle), y + np.sin(angle)), xytext=(x, y),
+                     arrowprops=dict(arrowstyle="->", color='green'))
+        ax1.text(x + 0.5 * np.cos(angle), y + 0.5 * np.sin(angle),
+                 f"{int(np.degrees(angle))}°", ha='center', va='center', color='green')
+
+    # Create vertical dashed lines on the angle graph subplot for the second dataset
+    for t in times2:
+        ax1.axvline(x=t, linestyle='dashed', color='gray')
+        ax2.text(t , bar_values2[times2.index(t)] + 1.2, f"{int(bar_values2[times2.index(t)])}", ha='center', va='center')
+
+    # Plot the bar chart for the second dataset in the second subplot
+    ax2.bar(times2, bar_values2, width=0.2, align='center', color='green')
+
+    # Create vertical dashed lines on the bar chart subplot for the second dataset
+    for t in times2:
+        ax2.axvline(x=t, linestyle='dashed', color='gray')
+
+    # Set labels and title for the angle graph subplot
+    ax1.set_ylabel('Y')
+    ax1.set_title('Angles in Degrees (°)', pad = 20)
+
+    # Set labels and title for the bar chart subplot
+    ax2.set_xlabel('Time (s)')
+    ax2.set_ylabel('Value')
+    ax2.set_title('SPL Sound Pressure Level (dB)', pad = 20)
+
+    # Adjust the spacing between subplots
+    plt.subplots_adjust(hspace=0.3)
 
     # Display the graph
-    fig.show()
-
-
-
-    import matplotlib.pyplot as plt
-
-    # define the data
-    toa = [22.97388949, 23.59899775, 25.75168887, 27.87624017, 28.09409635, 31.33958326, 31.95876047, 32.39149445, 33.39636271]
-    bearing = [-0.91137199, -0.94185888, -0.73733928, -0.60817156, -0.47725227, -0.17842146, -0.39988179, -0.24548724, -0.63939348]
-    spl = [78.39910845, 72.10571761, 69.94141609, 60.10739709, 57.50451793, 40.6371623, 43.98275939, 39.8110488, 42.2365895]
-
-    # create the scatter plot
-    plt.scatter(toa, bearing, c=spl)
-
-    # set axis labels and title
-    plt.xlabel('Time of Arrival')
-    plt.ylabel('2D Bearing Angles')
-    plt.title('Time of Arrival vs 2D Bearing Angles with SPL Level')
-
-    # add a colorbar
-    plt.colorbar(label='SPL Level')
-
-    # show the plot
     plt.show()
-
 
 

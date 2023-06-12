@@ -1,26 +1,46 @@
 import json
+import math
+from math import radians, cos, sin, atan2, sqrt
+import pygeodesy
 from PyQt5 import QtCore, QtGui, QtWidgets
+import folium, io
+from PyQt5 import QtWebEngineWidgets
+from folium.plugins import MousePosition, MeasureControl
+from PyQt5.QtWidgets import  QTableView, QMainWindow, QStyleFactory, \
+    QAbstractItemView, QFileDialog, QMessageBox
+from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
+import sqlite3
+import sys
+from PyQt5.QtWidgets import QApplication
+from matplotlib.animation import FuncAnimation
+from openpyxl import Workbook
+import loc_id_enterence
+import pandas as pd
 import subprocess
+import os
 import scipy.io
 import oct2py
 import numpy as np
 import matplotlib.pyplot as plt
-import folium, io
-from PyQt5 import QtWebEngineWidgets
-from folium.plugins import Draw, MousePosition, MeasureControl,MiniMap
-from matplotlib.animation import FuncAnimation
 from scipy.interpolate import interp1d
-from PyQt5.QtWidgets import QApplication, QTableView, QFrame, QVBoxLayout, QComboBox, QMainWindow, QStyleFactory, \
-    QAbstractItemView, QFileDialog
-from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
-import sqlite3
 import coordinate_cartesian
-import os
-import sys
-from PyQt5.QtWidgets import QApplication
+import matplotlib.patches as patches
 
 coordinates_db = []
 response = ()
+weapon_coordinates = []
+sensor_num = []
+sensor_posts = []
+sensor_names = []
+sensor_positions = []
+unit_names = []
+sensor_names_2 = []
+id_det_list = []
+unit_names_ordered = []
+ordered_ids = []
+ordered_doa = []
+ordered_level = []
+ordered_toa = []
 
 class WebEnginePage(QtWebEngineWidgets.QWebEnginePage):
     def javaScriptConsoleMessage(self, level, msg, line, sourceID):
@@ -38,17 +58,20 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1274, 809)
-        self.horizontalLayoutWidget = QtWidgets.QWidget(MainWindow)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 520, 601, 271))
-        self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
+        MainWindow.setWindowIcon(QtGui.QIcon("Microflownlogo.png"))
+        MainWindow.setWindowFlags(MainWindow.windowFlags() | QtCore.Qt.WindowMaximizeButtonHint)
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.centralwidget.setGeometry(QtCore.QRect(20, 20, 601, 501))
+        self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
+        self.horizontalLayoutWidget.setContentsMargins(0, 10, 0, 10)
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.frame_3 = QtWidgets.QFrame(MainWindow)
+        self.frame_3 = QtWidgets.QFrame(self.centralwidget)
         self.frame_3.setGeometry(QtCore.QRect(10, 10, 601, 501))
+        self.frame_3.setFixedSize(601,501)
         self.frame_3.setFrameShape(QtWidgets.QFrame.Box)
         self.frame_3.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.frame_3.setObjectName("frame_3")
         self.lineEdit_5 = QtWidgets.QLineEdit(self.frame_3)
         self.lineEdit_5.setGeometry(QtCore.QRect(165, 60, 100, 20))
         self.lineEdit_5.setObjectName("lineEdit_5")
@@ -180,7 +203,7 @@ class Ui_MainWindow(object):
         self.label_28.setFont(font)
         self.label_28.setAlignment(QtCore.Qt.AlignCenter)
         self.label_28.setObjectName("label_28")
-        self.pushButton_8 = QtWidgets.QPushButton(self.frame_3, clicked = lambda : set_model_parameters())
+        self.pushButton_8 = QtWidgets.QPushButton(self.frame_3, clicked = lambda:set_model_parameters())
         self.pushButton_8.setGeometry(QtCore.QRect(200, 460, 101, 31))
         font = QtGui.QFont()
         font.setPointSize(7)
@@ -190,7 +213,7 @@ class Ui_MainWindow(object):
         self.pushButton_8.setIcon(icon)
         self.pushButton_8.setIconSize(QtCore.QSize(20, 20))
         self.pushButton_8.setObjectName("pushButton_8")
-        self.pushButton_9 = QtWidgets.QPushButton(self.frame_3)
+        self.pushButton_9 = QtWidgets.QPushButton(self.frame_3, clicked = lambda : filet_loc_det(response[0]))
         self.pushButton_9.setGeometry(QtCore.QRect(310, 460, 101, 31))
         font = QtGui.QFont()
         font.setPointSize(7)
@@ -211,25 +234,41 @@ class Ui_MainWindow(object):
         self.lineEdit_22 = QtWidgets.QLineEdit(self.frame_3)
         self.lineEdit_22.setGeometry(QtCore.QRect(480, 420, 101, 16))
         self.lineEdit_22.setObjectName("lineEdit_22")
-        self.tableWidget = QtWidgets.QTableWidget(MainWindow)
-        self.tableWidget.setGeometry(QtCore.QRect(630, 40, 631, 751))
+        self.comboBox = QtWidgets.QComboBox(self.centralwidget)
+        self.comboBox.setGeometry(QtCore.QRect(700, 12, 500, 21))
+        self.comboBox.setObjectName("comboBox")
+        self.tableWidget = QtWidgets.QTableWidget(self.centralwidget)
+        #self.tableWidget.setGeometry(QtCore.QRect(630, 40, 631, 751))
+        self.tableWidget.setMinimumSize(631, 751)
         self.tableWidget.setObjectName("tableWidget")
         self.tableWidget.setColumnCount(0)
         self.tableWidget.setRowCount(0)
-        self.comboBox = QtWidgets.QComboBox(MainWindow)
-        self.comboBox.setGeometry(QtCore.QRect(630, 12, 631, 21))
-        self.comboBox.setObjectName("comboBox")
+        self.horizontalLayoutWidget.setFixedWidth(621)
+
+        self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
+        self.gridLayout.addWidget(self.frame_3,0,0,1,1)
+        self.gridLayout.addWidget(self.horizontalLayoutWidget, 1, 0,1,1)
+        self.gridLayout.addWidget(self.tableWidget, 0, 1, 2, 1)
+
+
+        # Set the layout stretch for the main layout
+        self.gridLayout.setColumnStretch(0, 0)  # Set the stretch factor for frame_3 column to 0
+        self.gridLayout.setColumnStretch(1, 1)  # Set the stretch factor for tableWidget column to 1
+        self.gridLayout.setRowStretch(0, 0)  # Set the stretch factor for frame_3 row to 0
+        self.gridLayout.setRowStretch(1, 1)  # Set the stretch factor for horizontalLayoutWidget row to 1
+
+        self.gridLayout.setContentsMargins(20, 40, 20, 30)
 
         self.lineEdit_5.setText('500')
         self.lineEdit_6.setText('1000*[1 1]')
         self.lineEdit_7.setText('2000*[1 1]')
-        self.lineEdit_8.setText('10')
+        self.lineEdit_8.setText('15')
         self.lineEdit_9.setText('1.2466')
         self.lineEdit_10.setText('nan')
         self.lineEdit_11.setText('[0,0,0]')
-        self.lineEdit_12.setText('36')
-        self.lineEdit_13.setText('18.2812')
-        self.lineEdit_14.setText('926')
+        self.lineEdit_12.setText('44.55')
+        self.lineEdit_13.setText('22.33125')
+        self.lineEdit_14.setText('532.8')
         self.lineEdit_23.setText('43.7')
         self.lineEdit_24.setText('0.155')
         self.lineEdit_17.setText('0.8787')
@@ -237,6 +276,8 @@ class Ui_MainWindow(object):
         self.lineEdit_18.setText('194')
         self.lineEdit_15.setText('0.04')
         self.lineEdit_16.setText('0')
+        self.lineEdit_19.setText('55.0099826')
+        self.lineEdit_22.setText('25.9431195')
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -249,10 +290,69 @@ class Ui_MainWindow(object):
             filter=file_filter,
             initialFilter='Database Files (*.db)',
         )
-        print(response)
+
+
+
+        def filet_loc_det(database_name):
+            global sensor_num, sensor_names
+            conn = sqlite3.connect(database_name)
+            loc_id_enterence.open_loc_id()
+            id_loc = loc_id_enterence.loc_id
+            # Define an empty list to store the values of id_det
+            id_det_list = []
+
+            # Execute the SQL query to select the values from id_det where id_loc matches the user input
+            cursor = conn.cursor()
+            cursor.execute("SELECT id_det FROM loc_det WHERE id_loc = ?", (id_loc,))
+            # Loop through the results and append the values to the list
+            for row in cursor:
+                id_det_list.append(row[0])
+
+            id_values = id_det_list
+            list_units = []
+            sensor_ids_int = []
+            sensor_ids = list(cursor.execute(f"SELECT sensorid FROM detection WHERE id IN ({', '.join(str(id) for id in id_values)})"))
+
+            for row in sensor_ids:
+                sensor_ids_int.append(int(row[0]))
+            for integer in sensor_ids_int:
+                if integer in sensor_num:
+                    list_units.append(sensor_names_2[sensor_num.index(integer)])
+                else:
+                    pass
+            query = f"SELECT sensorid,time,azimuth,leveldb FROM detection WHERE id IN ({', '.join(str(id) for id in id_values)})"
+                # Save the DataFrame to an Excel file with the same headers as the detection table
+
+            count = 0
+            for id in id_det_list:
+                o_id = list(cursor.execute(
+                    f"SELECT sensorid FROM detection WHERE id = ?", (id,)))
+                ordered_ids.append(o_id[0])
+                # Close the database connection
+                o_doa = list(cursor.execute(
+                    f"SELECT azimuth FROM detection WHERE id = ?", (id,)))
+                ordered_doa.append(o_doa[0])
+                # Close the database connection
+                o_level = list(cursor.execute(
+                    f"SELECT leveldb FROM detection WHERE id = ?", (id,)))
+                ordered_level.append(o_level[0])
+                # Close the database connection
+                o_toa = list(cursor.execute(
+                    f"SELECT time FROM detection WHERE id = ?", (id,)))
+                ordered_toa.append(o_toa[0])
+                # Close the database connection`
+                count = count + 1
+            conn.close()
+
+            print(ordered_ids)
+            print(id_det_list)
+            print(ordered_doa)
+            print(ordered_toa)
+            print(ordered_level)
+
 
         def list_db_tables(database_name):
-            global coordinates_db
+            global coordinates_db, sensor_num
             table_list = []
             # Open connection to the database
             conn = sqlite3.connect(database_name)
@@ -274,9 +374,9 @@ class Ui_MainWindow(object):
             model.setEditStrategy(QSqlTableModel.OnFieldChange)  # Set the edit strategy
             # Set the model for the table view
             table_view = QTableView(self.tableWidget)
-            table_view.setGeometry(0, 0, 631, 751)
             table_view.setModel(model)
             table_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            self.gridLayout.addWidget(table_view, 0, 1, 2, 1)
             self.comboBox.addItems(table_list)  # Replace with your actual table names
             model.setTable(table_list[0])
             model.select()
@@ -285,11 +385,29 @@ class Ui_MainWindow(object):
                 model.setTable(self.comboBox.currentText())
                 model.select()
             # Close the connection to the database
+
+            self.comboBox.setCurrentIndex(1)
+
+            cursor.execute("SELECT * FROM detection")
+            rows = cursor.fetchall()
+
+            # Create Excel workbook and sheet
+            wb = Workbook()
+            ws = wb.active
+
+            # Write data to Excel sheet
+            for row in rows:
+                ws.append(row)
+
+            # Save Excel file
+            wb.save('mission_analyses.xlsx')
+
+            # Close database connection
             conn.close()
 
         def get_position_db(database_name):
             global response
-            global coordinates_db
+            global coordinates_db, sensor_num
             # Open connection to the database
             conn = sqlite3.connect(database_name)
             # Create a QSqlDatabase object to connect to the database
@@ -300,22 +418,57 @@ class Ui_MainWindow(object):
             sensor_id = cursor.fetchall()
             cursor.execute("SELECT latitude, longitude FROM device_position GROUP BY deviceid;")
             results = cursor.fetchall()
+            cursor.execute("SELECT deviceId FROM firmware_info;")
+            units = cursor.fetchall()
             coordinates_db = []
             sensor_num = []
-            for row in results:
-                coordinates_db.append(list(row))
-            print(coordinates_db)
             for row in sensor_id:
                 sensor_num.append(list(row)[-1])
-            print(sensor_num)
+            for row in units:
+                unit_names.append(list(row)[-1])
+            for row in results:
+                coordinates_db.append(list(row))
             # Close the connection to the database
-            conn.close()
 
+            conn.close()
         get_position_db(response[0])
         list_db_tables(response[0])
+
+        for number in sensor_num:
+            self.convert_last_two_digits(number)
+        set1 = set(sensor_names)
+        set2 = set(unit_names)
+        extra_element = set1.difference(set2)
+        for sensor in extra_element:
+            coordinates_db.pop(sensor_names.index(sensor))
+            sensor_names.remove(sensor)
+
+        set1 = set(sensor_names)
+        set2 = set(unit_names)
+        extra_element = set1.difference(set2)
+        for sensor in extra_element:
+            coordinates_db.pop(sensor_names.index(sensor))
+            sensor_names.remove(sensor)
+
+
         createMainMap(self.horizontalLayout)
 
         def set_model_parameters():
+            global weapon_coordinates
+            filet_loc_det(response[0])
+            msgBox = QMessageBox()
+            msgBox.setWindowIcon(QtGui.QIcon("Microflownlogo.png"))
+            msgBox.setText("WARNING.")
+            msgBox.setInformativeText("Are you sure to set parameters as filled?")
+            msgBox.setWindowTitle("Warning")
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            msgBox.setDefaultButton(QMessageBox.Ok)
+            msgBox.exec_()
+            weapon_coordinates.append(float(self.lineEdit_19.text()))
+            weapon_coordinates.append(float(self.lineEdit_22.text()))
+            latlon_to_cartesian(weapon_coordinates, coordinates_db)
+
             change_variable_octave('        senRes     =', self.lineEdit_5.text())
             change_variable_octave('        gridRes    =', self.lineEdit_6.text())
             change_variable_octave('        gridSenRes =', self.lineEdit_7.text())
@@ -333,10 +486,53 @@ class Ui_MainWindow(object):
             change_variable_octave('            srcLevelSw_dB_SPL =', self.lineEdit_18.text())
             change_variable_octave('            ps.attnCoef =', self.lineEdit_15.text())
             change_variable_octave('            paramSw.impPosZ =', self.lineEdit_16.text())
+            change_variable_octave('            sensorInfo.position =', sensor_positions)
+
+            create_graph_animation()
+
+
+
+        def latlon_to_cartesian(ref_latlon, latlon_list):
+            global sensor_posts, sensor_names, sensor_positions
+            # Convert reference lat-lon point to radians
+            ref_lat = radians(ref_latlon[0])
+            ref_lon = radians(ref_latlon[1])
+            # Calculate reference Cartesian coordinates
+            ref_x = cos(ref_lat) * cos(ref_lon)
+            ref_y = cos(ref_lat) * sin(ref_lon)
+            ref_z = 0
+            for latlon in latlon_list:
+                lat = radians(latlon[0])
+                lon = radians(latlon[1])
+                # Calculate distance between lat-lon points in meters
+                d_lat = lat - ref_lat
+                d_lon = lon - ref_lon
+                a = sin(d_lat / 2) ** 2 + cos(ref_lat) * cos(lat) * sin(d_lon / 2) ** 2
+                c = 2 * atan2(sqrt(a), sqrt(1 - a))
+                d = pygeodesy.haversine(ref_latlon[0], ref_latlon[1], latlon[0], latlon[1], radius=6371008.77141,
+                                        wrap=False)
+                theta = pygeodesy.bearing(ref_latlon[0], ref_latlon[1], latlon[0], latlon[1], wrap=False)
+                # Calculate corresponding Cartesian coordinates
+                x = d * cos(math.radians(360 - theta))
+                y = d * sin(math.radians(360 - theta))
+                z = 0
+                sensor_posts.append([x, y, z])
+
+            sensor_position = np.array(sensor_posts).T
+            sensor_positions = "[" + ";".join([" ".join(map(str, row)) for row in sensor_position]) + "]"
+
+        self.comboBox.setCurrentText('detection')
+
+    def convert_last_two_digits(self,num):
+        hex_num = hex(num)
+        last_two_digits = hex_num[-2:]
+        decimal_num = int(last_two_digits, 16)
+        sensor_names.append('UNIT-01-000{}'.format(decimal_num))
+        sensor_names_2.append('UNIT-01-000{}'.format(decimal_num))
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Automated Forward Model Tester"))
         self.label_11.setText(_translate("MainWindow", "Sensor Resolution:"))
         self.label_12.setText(_translate("MainWindow", "Grid Resolution:"))
         self.label_13.setText(_translate("MainWindow", "Temperature [°C]:"))
@@ -356,7 +552,7 @@ class Ui_MainWindow(object):
         self.label_27.setText(_translate("MainWindow", "Air Density [kg/m3]"))
         self.label_28.setText(_translate("MainWindow", "Advanced Settings"))
         self.pushButton_8.setText(_translate("MainWindow", "Run Calculation"))
-        self.pushButton_9.setText(_translate("MainWindow", "Create Graph"))
+        self.pushButton_9.setText(_translate("MainWindow", "New Database"))
         self.label_29.setText(_translate("MainWindow", "Weapon Latitude - Longitude:"))
 
 def change_variable_octave(variable, temp_input):
@@ -367,6 +563,7 @@ def change_variable_octave(variable, temp_input):
                 var = line
             else:
                 pass
+
     with open('forward_model/fwdCompute.m', 'r') as f:
         code = f.read()
 
@@ -376,9 +573,41 @@ def change_variable_octave(variable, temp_input):
         f.write(code)
 
 
-def evaulate_scenario():
+def createMainMap(layout):
+    global coordinates_db
+    mainmap = folium.Map(location=(float(coordinates_db[-1][0]),float(coordinates_db[-1][1])), control_scale=True,
+                         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                         attr='Esri', name='Esri Satellite', overlay=False, control=True, zoom_start=12,
+                       detect_retina=True)
+
+
+    formatter = "function(num) {return L.Util.formatNum(num, 6) + ' º ';};"
+    MousePosition(position="topright", separator=" | ", empty_string="NaN", lat_first=True, num_digits=20,
+                  prefix="Coordinates:",
+                  lat_formatter=formatter, lng_formatter=formatter, ).add_to(mainmap)
+
+    mainmap.add_child(MeasureControl())
+    for sensor in coordinates_db:
+        folium.Marker(location=(sensor[0],sensor[1]), icon=folium.features.CustomIcon('icon_sensor.png',
+                      icon_size=(19, 22)), popup=sensor_names[coordinates_db.index(sensor)]).add_to(mainmap)
+        unit_names_ordered.append(sensor_names[coordinates_db.index(sensor)])
+
+    view = QtWebEngineWidgets.QWebEngineView()
+    view.setContentsMargins(2, 5, 28, 5)
+    view.resize(630, 320)
+    page = WebEnginePage(view)
+    view.setPage(page)
+    data = io.BytesIO()
+    mainmap.save(data, close_file=False)
+    view.setHtml(data.getvalue().decode())
+    layout.addWidget(view)
+
+def create_graph_animation():
+    global sensor_names
     oc = oct2py.Oct2Py()
+
     sensor_positions = []
+
     def run_octave_function(m_file, function_name, *args):
         # Build the command to run the Octave function
         cmd = ['octave', '--eval', f'{function_name}({",".join(args)}); save my_data.mat -mat']
@@ -388,9 +617,10 @@ def evaulate_scenario():
         with open(m_file, 'r') as f:
             subprocess.run(cmd, cwd=os.path.dirname(os.path.abspath(f.name)), capture_output=True)
 
-    #run_octave_function(r'C:\Users\Eraslan\PycharmProjects\mdtProject1\forward_model/fwdCompute.m','[resSW , resSE] = fwdCompute.exampleSimple')
+    #run_octave_function('forward_model/fwdCompute.m', 'clear classes')
+    #run_octave_function('forward_model/fwdCompute.m', '[resSW , resSE] = fwdCompute.exampleSimple')
 
-    data = scipy.io.loadmat(r'C:\Users\Eraslan\PycharmProjects\mdtProject1\forward_model\my_data.mat')
+    data = scipy.io.loadmat('forward_model\my_data.mat')
 
     validity_SE = data['resSE']['valid']
     toa_SE = data['resSE']['toa']
@@ -441,44 +671,39 @@ def evaulate_scenario():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.plot3D(proj_F_x[0], proj_F_x[1], proj_F_x[2])
-    ax.scatter(proj_F_x[0][-1], proj_F_x[1][-1], proj_F_x[2][-1], c = 'red')
-    coordinate_cartesian.mgrs_to_latlon(['35UMA3241096412'],['35UMB2850403535','35UMB2899003931','35UMB2626403309',
-                                        '35UMB2496603017','35UMB2425402105', '35UMA2209199292','35UMB2273302010',
-                                        '35UMB2195500272','35UMB2371404445'])
+    ax.scatter(proj_F_x[0][-1], proj_F_x[1][-1], proj_F_x[2][-1], c='red')
+
+    coordinate_cartesian.latlon_to_cartesian(weapon_coordinates, coordinates_db)
 
     sensor_positions = coordinate_cartesian.sensor_posts
-    sensor_names = ['S2','S1','S3','S4','S5','S9','S6','S7','S8']
-
-
     for j in range(len(sensor_positions)):
-        ax.scatter(sensor_positions[j][0],sensor_positions[j][1], sensor_positions[j][2], c= 'blue', s=10)
-        ax.text(sensor_positions[j][0],sensor_positions[j][1], sensor_positions[j][2], sensor_names[j])
+        ax.scatter(sensor_positions[j][0], sensor_positions[j][1], sensor_positions[j][2], c='blue', s=10)
+        ax.text(sensor_positions[j][0], sensor_positions[j][1], sensor_positions[j][2], unit_names_ordered[j])
     for i in range(len(ray_S_valid[0])):
         if ray_S_valid[0][i][0][0] == 0:
             pass
         else:
-            ax.plot3D(ray_S_x[0][i][0], ray_S_x[0][i][1], ray_S_x[0][i][2], linestyle = 'dotted')
-
+            ax.plot3D(ray_S_x[0][i][0], ray_S_x[0][i][1], ray_S_x[0][i][2], linestyle='dotted')
 
     ax.autoscale_view()
 
-    proj, = ax.plot3D(xs=proj_F_x[0], ys=proj_F_x[1], zs=proj_F_x[2] ,c= '#9DDFDD')
+    proj, = ax.plot3D(xs=proj_F_x[0], ys=proj_F_x[1], zs=proj_F_x[2], c='#9DDFDD')
     x = np.array(proj_F_x[0])
     y = np.array(proj_F_x[1])
     z = np.array(proj_F_x[2])
 
+
     def animate_projection(i):
         proj.set_data(x[:i], y[:i])
         proj.set_3d_properties(z[:i])
-        #cone.set_data(x_2[:i], y_2[:i])
-        #cone.set_3d_properties(z_2[:i])
-        #doa.set_data(x_3[:i], y_3[:i])
-        #doa.set_3d_properties(z_3[:i])
-        #ax.set_xlim(0, 50000)
-        #ax.set_ylim(0, 50000)
-        #ax.set_zlim(0, 20000)
+        # cone.set_data(x_2[:i], y_2[:i])
+        # cone.set_3d_properties(z_2[:i])
+        # doa.set_data(x_3[:i], y_3[:i])
+        # doa.set_3d_properties(z_3[:i])
+        # ax.set_xlim(0, 50000)
+        # ax.set_ylim(0, 50000)
+        # ax.set_zlim(0, 20000)
         ax.set_title("Trajectory Simulation of the Event - t({})s".format(i))
-
 
     # create an animation using the animate function and
     # specify the number of frames and the length of the animation
@@ -487,35 +712,104 @@ def evaulate_scenario():
     ax.set_xlim(0, 10000)
     ax.set_ylim(0, 12000)
     ax.set_zlim(0, 5000)
-    #plt.show()
+    plt.show()
+    unit_names_ordered.clear()
+    sensor_positions.clear()
 
-def createMainMap(layout):
-    global coordinates_db
-    mainmap = folium.Map(location=(float(coordinates_db[-1][0]),float(coordinates_db[-1][1])), control_scale=True,
-                         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                         attr='Esri', name='Esri Satellite', overlay=False, control=True, zoom_start=12,
-                       detect_retina=True)
+    def comparison_graph():
+        # First dataset
+        angles1 = []
+        times1 = []
+        bar_values1 = []
 
 
-    formatter = "function(num) {return L.Util.formatNum(num, 6) + ' º ';};"
-    MousePosition(position="topright", separator=" | ", empty_string="NaN", lat_first=True, num_digits=20,
-                  prefix="Coordinates:",
-                  lat_formatter=formatter, lng_formatter=formatter, ).add_to(mainmap)
+        #print (actual_angle_degrees)
 
-    mainmap.add_child(MeasureControl())
+        # Second dataset
+        angles2 = []
+        times2 = []
+        bar_values2 = []
 
-    for sensor in coordinates_db:
-        folium.Marker(location=(sensor[0],sensor[1]), icon=folium.features.CustomIcon('icon_sensor.png', icon_size=(19, 22))).add_to(mainmap)
+        # Convert angles to radians
 
-    view = QtWebEngineWidgets.QWebEngineView()
-    view.setContentsMargins(2, 5, 28, 50)
-    view.setFixedSize(630, 320)
-    page = WebEnginePage(view)
-    view.setPage(page)
-    data = io.BytesIO()
-    mainmap.save(data, close_file=False)
-    view.setHtml(data.getvalue().decode())
-    layout.addWidget(view)
+        for i in range(len(doa_SW[0][0][0])):
+            radian_angle = math.atan2(float(doa_SW[0][0][0][i]), float(doa_SW[0][0][1][i]))
+            angles1.append(-1*math.degrees(radian_angle))
+            times1.append(toa_SW[0][0][0][i])
+            bar_values1.append(level_SW[0][0][0][i])
+        print(angles1)
+        print(times1)
+        print(bar_values1)
+
+        angles_radians1 = np.radians(angles1)
+        angles_radians2 = np.radians(angles2)
+
+
+        # Create the figure and subplots
+        fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+
+        # Set aspect ratio to equal for the angle graph subplot
+        ax1.set_aspect('equal')
+
+        # Plot the arcs and arrows for the first dataset in the angle graph subplot
+        for angle, x, y in zip(angles_radians1, times1, np.zeros_like(times1)):
+            arc = patches.Arc((x, y), 0.2, 0.2, 0, 0, math.degrees(angle))
+            ax1.add_patch(arc)
+            ax1.annotate("", xy=(x + np.cos(angle), y + np.sin(angle)), xytext=(x, y),
+                         arrowprops=dict(arrowstyle="->"))
+            ax1.text(x + 0.5 * np.cos(angle), y + 0.5 * np.sin(angle),
+                     f"{int(np.degrees(angle))}°", ha='center', va='center')
+
+        # Create vertical dashed lines on the angle graph subplot for the first dataset
+        for t in times1:
+            ax1.axvline(x=t, linestyle='dashed', color='gray')
+
+        # Plot the bar chart for the first dataset in the second subplot
+        ax2.bar(times1, bar_values1, width=0.2, align='center', color='blue')
+
+        # Create vertical dashed lines on the bar chart subplot for the first dataset
+        for t in times1:
+            ax2.axvline(x=t, linestyle='dashed', color='gray')
+            ax2.text(t, bar_values1[times1.index(t)] + 1.2, f"{int(bar_values1[times1.index(t)])}", ha='center',
+                     va='center')
+
+        # Plot the arcs and arrows for the second dataset in the angle graph subplot
+        for angle, x, y in zip(angles_radians2, times2, np.zeros_like(times2)):
+            arc = patches.Arc((x, y), 0.2, 0.2, 0, 0, math.degrees(angle))
+            ax1.add_patch(arc)
+            ax1.annotate("", xy=(x + np.cos(angle), y + np.sin(angle)), xytext=(x, y),
+                         arrowprops=dict(arrowstyle="->", color='green'))
+            ax1.text(x + 0.5 * np.cos(angle), y + 0.5 * np.sin(angle),
+                     f"{int(np.degrees(angle))}°", ha='center', va='center', color='green')
+
+        # Create vertical dashed lines on the angle graph subplot for the second dataset
+        for t in times2:
+            ax1.axvline(x=t, linestyle='dashed', color='gray')
+            ax2.text(t, bar_values2[times2.index(t)] + 1.2, f"{int(bar_values2[times2.index(t)])}", ha='center',
+                     va='center')
+
+        # Plot the bar chart for the second dataset in the second subplot
+        ax2.bar(times2, bar_values2, width=0.2, align='center', color='green')
+
+        # Create vertical dashed lines on the bar chart subplot for the second dataset
+        for t in times2:
+            ax2.axvline(x=t, linestyle='dashed', color='gray')
+
+        # Set labels and title for the angle graph subplot
+        ax1.set_ylabel('Y')
+        ax1.set_title('Angles in Degrees (°)', pad=20)
+
+        # Set labels and title for the bar chart subplot
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Value')
+        ax2.set_title('SPL Sound Pressure Level (dB)', pad=20)
+
+        # Adjust the spacing between subplots
+        plt.subplots_adjust(hspace=0.3)
+
+        # Display the graph
+        plt.show()
+    comparison_graph()
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
