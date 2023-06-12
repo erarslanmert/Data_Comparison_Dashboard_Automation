@@ -58,7 +58,6 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1274, 809)
-        MainWindow.setWindowIcon(QtGui.QIcon("Microflownlogo.png"))
         MainWindow.setWindowFlags(MainWindow.windowFlags() | QtCore.Qt.WindowMaximizeButtonHint)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -457,7 +456,6 @@ class Ui_MainWindow(object):
             global weapon_coordinates
             filet_loc_det(response[0])
             msgBox = QMessageBox()
-            msgBox.setWindowIcon(QtGui.QIcon("Microflownlogo.png"))
             msgBox.setText("WARNING.")
             msgBox.setInformativeText("Are you sure to set parameters as filled?")
             msgBox.setWindowTitle("Warning")
