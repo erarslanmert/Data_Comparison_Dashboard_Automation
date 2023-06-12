@@ -26,7 +26,6 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(1250, 960)
-        MainWindow.setWindowIcon(QtGui.QIcon("Microflownlogo.png"))
         self.tableWidget = QtWidgets.QTableWidget(MainWindow)
         self.tableWidget.setGeometry(QtCore.QRect(5, 40, 1240, 900))
         self.tableWidget.setObjectName("tableWidget")
